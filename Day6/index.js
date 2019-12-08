@@ -1,5 +1,5 @@
 const INPUT = require("fs")
-  .readFileSync("./Day6/data.txt")
+  .readFileSync("./data.txt")
   .toString();
 
 function parseEdges(string) {
