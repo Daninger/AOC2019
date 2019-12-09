@@ -4,19 +4,30 @@ const SAMPLE_PROGRAM = require("fs")
   .split(",")
   .map(s => Number(s));
 
-function intCodeComputer(input, program = [3, 0, 4, 0, 99]) {
+function intCodeComputer(input, program = [3, 0, 4, 0, 99], startOffset = 0) {
   let index = 0;
   let output = [];
-  while (index < program.length) {
+  let iteration = 0;
+  let relativeBaseOffset = startOffset;
+  const setRelativeBaseOffset = value => (relativeBaseOffset += value);
+  const getRelativeBaseOffset = () => relativeBaseOffset;
+
+  while (true) {
+    iteration++;
     const { opcode, parameters } = parseOpcode(program[index]);
-    index = executeOpcode(opcode, input, output)(index, program, parameters);
+    index = executeOpcode(opcode, input, output, setRelativeBaseOffset)(
+      index,
+      program,
+      parameters,
+      getRelativeBaseOffset
+    );
     if (index === -1) {
       return { output, program };
     }
   }
 }
 
-function executeOpcode(code, input, output) {
+function executeOpcode(code, input, output, setRelativeBaseOffset) {
   switch (code) {
     case 1:
       return opcode1;
@@ -34,9 +45,11 @@ function executeOpcode(code, input, output) {
       return opcode7;
     case 8:
       return opcode8;
+    case 9:
+      return opcode9(setRelativeBaseOffset);
     case 99:
     default:
-      return -1;
+      return () => -1;
   }
 }
 
@@ -53,46 +66,58 @@ function parseOpcode(number) {
   return { opcode, parameters };
 }
 
-const readValue = (index, programm, parameter = 0) =>
-  programm[parameter ? index : programm[index]];
+const readValue = (index, programm, parameter = 0, offset) =>
+  programm[
+    parameter === 1 ? index : programm[index] + (parameter === 2 ? offset() : 0)
+  ];
 
-const writeValue = value => (index, programm, parameter = 0) =>
-  (programm[parameter ? index : programm[index]] = value);
+const writeValue = value => (index, programm, parameter = 0, offset) =>
+  (programm[
+    parameter === 1 ? index : programm[index] + (parameter === 2 ? offset() : 0)
+  ] = value);
 
 function opcodeArithmetic(operation) {
-  return (index, program, parameter) => {
+  return (index, program, parameter, offset) => {
     const result = operation(
-      readValue(index + 1, program, parameter[0]),
-      readValue(index + 2, program, parameter[1])
+      readValue(index + 1, program, parameter[0], offset),
+      readValue(index + 2, program, parameter[1], offset)
     );
-    writeValue(result)(index + 3, program, parameter[2]);
+    writeValue(result)(index + 3, program, parameter[2], offset);
     return index + 4;
   };
 }
-const opcodeJump = cond => (index, program, parameter) =>
-  cond(readValue(index + 1, program, parameter[0]))
-    ? readValue(index + 2, program, parameter[1])
+const opcodeJump = cond => (index, program, parameter, offset) =>
+  cond(readValue(index + 1, program, parameter[0], offset))
+    ? readValue(index + 2, program, parameter[1], offset)
     : index + 3;
 
-const opcodeCompare = compare => (index, program, parameter) => {
-  const first = readValue(index + 1, program, parameter[0]);
-  const second = readValue(index + 2, program, parameter[1]);
-  writeValue(compare(first, second) ? 1 : 0)(index + 3, program, parameter[2]);
+const opcodeCompare = compare => (index, program, parameter, offset) => {
+  const first = readValue(index + 1, program, parameter[0], offset);
+  const second = readValue(index + 2, program, parameter[1], offset);
+  writeValue(compare(first, second) ? 1 : 0)(
+    index + 3,
+    program,
+    parameter[2],
+    offset
+  );
   return index + 4;
 };
 
 const opcode1 = opcodeArithmetic((a, b) => a + b);
 const opcode2 = opcodeArithmetic((a, b) => a * b);
-const opcode3 = input => (index, program, parameter) =>
-  writeValue(input)(index + 1, program, parameter[0]) && index + 2;
-const opcode4 = output => (index, program, parameter) =>
-  output.push(readValue(index + 1, program, parameter[0])) && index + 2;
+const opcode3 = input => (index, program, parameter, offset) =>
+  writeValue(input)(index + 1, program, parameter[0], offset) && index + 2;
+const opcode4 = output => (index, program, parameter, offset) =>
+  output.push(readValue(index + 1, program, parameter[0], offset)) && index + 2;
 const opcode5 = opcodeJump(value => value !== 0);
 const opcode6 = opcodeJump(value => value === 0);
 const opcode7 = opcodeCompare((first, second) => first < second);
 const opcode8 = opcodeCompare((first, second) => first === second);
+const opcode9 = setRelativeBaseOffset => (index, program, parameter, offset) =>
+  setRelativeBaseOffset(readValue(index + 1, program, parameter[0], offset)) &&
+  index + 2;
 
-console.log(intCodeComputer(1, SAMPLE_PROGRAM.slice()).output);
+console.log(intCodeComputer(2, SAMPLE_PROGRAM.slice()).output);
 
 // PART 2
-console.log(intCodeComputer(5, SAMPLE_PROGRAM.slice()).output);
+console.log(intCodeComputer(2, SAMPLE_PROGRAM.slice()).output);
