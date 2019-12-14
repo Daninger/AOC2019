@@ -19,12 +19,19 @@ function parse(equation) {
   return { input, output };
 }
 
-
 let stock = {};
 let ore = 0;
 
-function produce(equations = SAMPLE, ingredient = "FUEL", toProduce = 1) {
-  console.log(ingredient, toProduce, stock);
+function produce(
+  toProduce = 1,
+  ingredient = "FUEL",
+  equations = SAMPLE,
+  reset = true
+) {
+  if (reset) {
+    stock = {};
+    ore = 0;
+  }
   if (stock[ingredient] && stock[ingredient] > 0) {
     toProduce -= stock[ingredient];
     stock[ingredient] = 0;
@@ -46,7 +53,7 @@ function produce(equations = SAMPLE, ingredient = "FUEL", toProduce = 1) {
   }
 
   formula.input.forEach(v =>
-    produce(equations, v.ingredient, v.value * factor)
+    produce(v.value * factor, v.ingredient, equations, (reset = false))
   );
   return ore;
 }
@@ -56,3 +63,27 @@ function multiplier(toProduce, minimumProductionOutput) {
 }
 
 console.log(produce());
+
+// PART 2
+
+function findMaximumAmountOfFUEL(value) {
+  const TRILL = 1000000000000;
+  const min = Math.floor(TRILL / value);
+  let a = min;
+  let b = 2 * min;
+  let m = () => Math.floor(a + (b - a) / 2);
+  while (b - a > 1) {
+    let next = m();
+    const produced = produce(next);
+    if (produced === TRILL) {
+      return next;
+    } else if (produced > TRILL) {
+      b = next;
+    } else {
+      a = next;
+    }
+  }
+  return m();
+}
+
+console.log(findMaximumAmountOfFUEL(720484));
