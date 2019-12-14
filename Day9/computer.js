@@ -1,28 +1,26 @@
-module.exports = function intCodeComputer(
-  program = [3, 0, 4, 0, 99],
-  input,
-  startOffset = 0
-) {
-  let output = [];
-  let iteration = 0;
-  let index = 0;
-  let relativeBaseOffset = startOffset;
-  const setRelativeBaseOffset = value => (relativeBaseOffset += value);
-  const getRelativeBaseOffset = () => relativeBaseOffset;
+module.exports = function intCodeComputer(program = [3, 0, 4, 0, 99]) {
+  return (input, startOffset = 0) => {
+    let output = [];
+    let iteration = 0;
+    let index = 0;
+    let relativeBaseOffset = startOffset;
+    const setRelativeBaseOffset = value => (relativeBaseOffset += value);
+    const getRelativeBaseOffset = () => relativeBaseOffset;
 
-  while (true) {
-    iteration++;
-    const { opcode, parameters } = parseOpcode(program[index]);
-    index = executeOpcode(opcode, input, output, setRelativeBaseOffset)(
-      index,
-      program,
-      parameters,
-      getRelativeBaseOffset
-    );
-    if (index === -1) {
-      return { output, program, relativeBaseOffset };
+    while (true) {
+      iteration++;
+      const { opcode, parameters } = parseOpcode(program[index]);
+      index = executeOpcode(opcode, input, output, setRelativeBaseOffset)(
+        index,
+        program,
+        parameters,
+        getRelativeBaseOffset
+      );
+      if (index === -1) {
+        return { output, program, relativeBaseOffset };
+      }
     }
-  }
+  };
 };
 
 function executeOpcode(code, input, output, setRelativeBaseOffset) {

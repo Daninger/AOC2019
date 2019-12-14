@@ -1,5 +1,5 @@
 const SAMPLE_PROGRAM = require("fs")
-  .readFileSync("./data.txt")
+  .readFileSync("./Day9/data.txt")
   .toString()
   .split(",")
   .map(s => Number(s));
