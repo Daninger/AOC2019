@@ -15,6 +15,16 @@ const opositeDirection = code => {
   }
 };
 
+const computer = Computer.load("./Day15/input.txt");
+
+function getNextStatus(input) {
+  computer.setInput(input);
+  while (!computer.isDone()) {
+    while (computer.run());
+    return computer.getLastOutput();
+  }
+}
+
 const droidStatus = {
   0: "WALL",
   1: "MOVE",
@@ -29,58 +39,77 @@ const MapMarker = {
   START: "0"
 };
 
+const str = v => v[0] + "," + v[1];
+
 function Droid() {
-  let pos = [0, 0];
-  let going;
   let map = [];
-  let computer = Computer.load("./Day15/input.txt");
+  let pos = [0, 0];
+  let going = undefined;
+  let visited = new Set();
+  let path = [];
   return {
-    pos,
-    going,
+    path,
+    visited,
     getMap: () => map,
+    getPos: () => pos,
     run() {
-      let droid = this;
-      let walls = 0;
-      let next = null;
+      let sensor = {};
       for (let i = 1; i <= 4; i++) {
-        if (droid.going == null || i !== opositeDirection(droid.going)) {
-          const ouput = getNextStatus(computer, i);
-          const status = droidStatus[ouput];
-          if (status === "MOVE") {
-            droid.markPositionInMap("FREE", i);
-            getNextStatus(computer, opositeDirection(i));
-            next = next === droid.going ? next : i;
-          }
-          if (status === "WALL") {
-            droid.markPositionInMap("WALL", i);
-            walls++;
-          }
-          if (status === "FOUND_OXYGEN") {
-            console.log("FOUND IT", droid.pos);
-            droid.markPositionInMap("OXYGEN", i);
-            return true;
+        let status = getNextStatus(i);
+        if (status === 1) {
+          getNextStatus(opositeDirection(i));
+        }
+        sensor[i] = status;
+        this.markPositionInMap(
+          status === 0 ? "WALL" : status === 1 ? "FREE" : "OXYGEN",
+          i
+        );
+        if (status === 2) {
+          console.log("FOUND oxygen", this.wouldMove(i));
+          return true;
+        }
+      }
+      if (Object.values(sensor).filter(it => it === 0).length === 3) {
+        console.log("DEAD END");
+      }
+
+      let anyDirection = null;
+      let bestDirection = null;
+      let betterDirection = null;
+
+      for ([direction, status] of Object.entries(sensor)) {
+        if (status === 1) {
+          anyDirection = direction;
+          const next = this.wouldMove(direction);
+          let last = path[path.length - 2];
+          if (!visited.has(str(next))) {
+            bestDirection = direction;
+          } else if (
+            last != null &&
+            (next[0] !== last[0] || next[1] !== last[1])
+          ) {
+            betterDirection = direction;
           }
         }
       }
-      if (walls === 3) {
-        droid.changeDirection(opositeDirection(droid.going));
-        droid.move(droid.going);
-      } else {
-        droid.changeDirection(next);
-        droid.move(droid.going);
-      }
+
+      let nextDirection = bestDirection || betterDirection || anyDirection;
+
+      getNextStatus(nextDirection);
+      this.changeDirection(nextDirection);
+      this.move(nextDirection);
     },
     markPositionInMap(symbol, i) {
       let next = this.wouldMove(i);
       map[next[0]] = map[next[0]] || [];
       map[next[0]][next[1]] = MapMarker[symbol];
     },
-    changeDirection(going = movementCommand.SOUTH) {
-      this.going = going;
+    changeDirection(g = movementCommand.SOUTH) {
+      going = Number(g);
     },
     wouldMove(i) {
-      let current = [...this.pos];
-      switch (i) {
+      let current = pos.slice();
+      switch (Number(i)) {
         case movementCommand.NORTH:
           current[1]--;
           break;
@@ -98,28 +127,22 @@ function Droid() {
     },
     move(direction = movementCommand.SOUTH) {
       const next = this.wouldMove(direction);
-      this.pos = next;
-      getNextStatus(computer, this.going);
+      pos = next;
+      visited.add(str(pos));
+      path.push(str(pos));
     }
   };
-}
-
-function getNextStatus(computer, input) {
-  computer.setInput(input);
-  while (!computer.isDone()) {
-    while (computer.run());
-    return computer.getLastOutput();
-  }
 }
 
 function findOxygenSytem() {
   const droid = Droid();
   let iteration = 0;
-  while (iteration < 1000000) {
+  while (iteration < 10000) {
     iteration++;
     if (droid.run()) {
       return droid;
     }
+    console.log(droid.path);
   }
   return droid;
 }
@@ -143,8 +166,9 @@ function printMap(map) {
   return s;
 }
 
-const droid = findOxygenSytem();
-const s = printMap(droid.getMap());
+const d = findOxygenSytem();
+const s = printMap(d.getMap());
+console.log(d.path.slice(d.path.length - 100));
 
 require("fs").writeFileSync("./Day15/map.txt", s);
 
