@@ -45,7 +45,7 @@ function Droid() {
   let map = [];
   let pos = [0, 0];
   let going = undefined;
-  let visited = new Set();
+  let visited = new Map();
   let path = [];
   return {
     path,
@@ -53,51 +53,46 @@ function Droid() {
     getMap: () => map,
     getPos: () => pos,
     run() {
-      let sensor = {};
+      let free = 0;
+      let nextDir = 0;
+      let unvisitedDir = 0;
       for (let i = 1; i <= 4; i++) {
         let status = getNextStatus(i);
-        if (status === 1) {
-          getNextStatus(opositeDirection(i));
-        }
-        sensor[i] = status;
         this.markPositionInMap(
           status === 0 ? "WALL" : status === 1 ? "FREE" : "OXYGEN",
           i
         );
-        if (status === 2) {
+        if (status === 1) {
+          getNextStatus(opositeDirection(i));
+          const nextPos = this.wouldMove(i);
+          free++;
+          if (visited.has(str(nextPos)) && visited.get(str(nextPos)) <= 0) {
+            continue;
+          }
+          if (!visited.has(str(nextPos))) {
+            unvisitedDir = i;
+          }
+          nextDir = i;
+        } else if (status === 2) {
           console.log("FOUND oxygen", this.wouldMove(i));
           return true;
         }
       }
-      if (Object.values(sensor).filter(it => it === 0).length === 3) {
-        console.log("DEAD END");
+
+      const id = str(pos);
+      if (!visited.has(id)) {
+        visited.set(id, free);
       }
+      console.log(id, free);
 
-      let anyDirection = null;
-      let bestDirection = null;
-      let betterDirection = null;
-
-      for ([direction, status] of Object.entries(sensor)) {
-        if (status === 1) {
-          anyDirection = direction;
-          const next = this.wouldMove(direction);
-          let last = path[path.length - 2];
-          if (!visited.has(str(next))) {
-            bestDirection = direction;
-          } else if (
-            last != null &&
-            (next[0] !== last[0] || next[1] !== last[1])
-          ) {
-            betterDirection = direction;
-          }
-        }
+      let dir = nextDir || unvisitedDir;
+      if (dir) {
+        getNextStatus(dir);
+        this.changeDirection(dir);
+        this.move(dir);
+        const it = visited.get(id);
+        visited.set(id, it - 1);
       }
-
-      let nextDirection = bestDirection || betterDirection || anyDirection;
-
-      getNextStatus(nextDirection);
-      this.changeDirection(nextDirection);
-      this.move(nextDirection);
     },
     markPositionInMap(symbol, i) {
       let next = this.wouldMove(i);
@@ -128,8 +123,6 @@ function Droid() {
     move(direction = movementCommand.SOUTH) {
       const next = this.wouldMove(direction);
       pos = next;
-      visited.add(str(pos));
-      path.push(str(pos));
     }
   };
 }
@@ -137,23 +130,26 @@ function Droid() {
 function findOxygenSytem() {
   const droid = Droid();
   let iteration = 0;
-  while (iteration < 10000) {
+  while (iteration < 10) {
     iteration++;
     if (droid.run()) {
       return droid;
     }
-    console.log(droid.path);
   }
   return droid;
 }
 
-function printMap(map) {
+function printMap(map, pos) {
   let s = "";
-  for (y = -10; y < 50; y++) {
-    for (x = -50; x < 50; x++) {
+  for (y = -100; y < 100; y++) {
+    for (x = -100; x < 100; x++) {
       if (x === 0 && y === 0) {
         //process.stdout.write("O");
         s += "O";
+        continue;
+      }
+      if (str([y, x]) === str(pos)) {
+        s += "D";
         continue;
       }
       let content = (map[y] || [])[x] || "x";
@@ -167,9 +163,8 @@ function printMap(map) {
 }
 
 const d = findOxygenSytem();
-const s = printMap(d.getMap());
-console.log(d.path.slice(d.path.length - 100));
-
+const s = printMap(d.getMap(), d.getPos());
+console.log(d.visited, d.getPos());
 require("fs").writeFileSync("./Day15/map.txt", s);
 
 module.exports = getNextStatus;
