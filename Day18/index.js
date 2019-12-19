@@ -1,5 +1,11 @@
 class Maze {
+  collectedKeys = [];
+  keysToFind = 0;
+  shortestPath = 0;
+  visited = new Set();
+
   constructor(root, nodes) {
+    this.root = root;
     for (let node of nodes) {
       if (node.canBeEleminated()) {
         node.removed = true;
@@ -27,10 +33,11 @@ class Maze {
   }
 
   static load(input) {
-    const lines = require("fs")
+    const mazeStr = require("fs")
       .readFileSync(input)
-      .toString()
-      .split("\n");
+      .toString();
+
+    const lines = mazeStr.split("\n");
 
     let nodes = [];
     let root;
@@ -41,6 +48,9 @@ class Maze {
         if (n) {
           if (n.isRoot) {
             root = n;
+          }
+          if (n.isKey) {
+            this.keysToFind++;
           }
           nodes.push(n);
         }
@@ -64,9 +74,10 @@ class Node {
   neighbors = [];
   distance = [];
   removed = false;
-  constructor(i, j) {
-    this.i = i;
-    this.j = j;
+  constructor(i, j, symbol) {
+    this.i = Number(i);
+    this.j = Number(j);
+    this.symbol = symbol;
   }
 
   get id() {
@@ -79,6 +90,14 @@ class Node {
 
   canBeEleminated() {
     return this.isPath === true && this.neighbors.length < 3;
+  }
+
+  getNeighbor(i) {
+    return { neighbor: this.neighbors[i], distance: this.distance[i] };
+  }
+
+  getNeighbors() {
+    return this.neighbors.map((_, i) => this.getNeighbor(i));
   }
 
   addNeighbor(node, distance = 1) {
@@ -96,16 +115,16 @@ class Node {
   }
   static create(i, j, symbol) {
     if (symbol === "@") {
-      return new Root(i, j);
+      return new Root(i, j, symbol);
     }
     if (symbol === ".") {
-      return new Path(i, j);
+      return new Path(i, j, symbol);
     }
     if (/[A-Z]+/.test(symbol)) {
-      return new Door(i, j).for(symbol);
+      return new Door(i, j, symbol);
     }
     if (/[a-z]+/.test(symbol)) {
-      return new Key(i, j).for(symbol);
+      return new Key(i, j, symbol);
     }
   }
 }
@@ -118,17 +137,49 @@ class Path extends Node {
 }
 class Door extends Node {
   isDoor = true;
-  for(door) {
-    this.door = door;
-    return this;
+
+  get door() {
+    return this.symbol;
+  }
+
+  canPass(keys) {
+    return keys.includes(this.door.toLowerCase());
   }
 }
 class Key extends Node {
   isKey = true;
-  for(key) {
-    this.key = key;
-    return this;
+
+  get key() {
+    return this.key;
   }
 }
 
 const maze = Maze.load("./Day18/input.txt");
+
+console.log(maze.findAllKeys());
+
+let out = "";
+for (let i = 0; i < 82; i++) {
+  for (let j = 0; j < 82; j++) {
+    let sign = undefined;
+    for (node of maze.nodes) {
+      if (node.i === i && node.j === j) {
+        sign = node.symbol;
+        break;
+      }
+      for ({ neighbor, distance } of node.getNeighbors()) {
+        if (i == node.i && j <= neighbor.j && node.j <= j) {
+          sign = "-";
+          break;
+        } else if (j == node.j && i <= neighbor.i && node.i <= i) {
+          sign = "|";
+          break;
+        }
+      }
+    }
+    out += sign || " ";
+  }
+  out += "\n";
+}
+
+require("fs").writeFileSync("./Day18/mace.txt", out);
