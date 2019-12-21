@@ -1,16 +1,10 @@
-const SAMPLE_PROGRAM = require("fs")
-  .readFileSync("./Day9/data.txt")
-  .toString()
-  .split(",")
-  .map(s => Number(s));
+const computer = require("../Computer").load("./Day9/data.txt");
 
-const intCodeComputer = require("./computer");
+computer.setInput(1);
+computer.run();
+console.log("Answer part1", computer.getLastOutput());
 
-const computer = () => intCodeComputer(SAMPLE_PROGRAM.slice());
-
-console.log(computer()(1).output);
-
-// PART 2
-console.log(computer()(2).output);
-
-module.exports = intCodeComputer;
+computer.reset();
+computer.setInput(2);
+computer.run();
+console.log("Answer part2", computer.getLastOutput());

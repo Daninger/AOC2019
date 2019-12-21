@@ -1,10 +1,10 @@
-const Computer = require("../Day11/computer");
+const Computer = require("../Computer");
 
 function scan(x, y) {
   let computer = Computer.load("./Day19/input.txt");
   computer.setInput(x);
   computer.setInput(y);
-  while (computer.run());
+  computer.run();
   return computer.getLastOutput();
 }
 
