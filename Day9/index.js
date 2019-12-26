@@ -1,4 +1,4 @@
-const computer = require("../Computer").load("./Day9/data.txt");
+const computer = require("../Computer").load("./Day9/input.txt");
 
 computer.setInput(1);
 computer.run();

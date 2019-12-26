@@ -1,4 +1,4 @@
-const Droid = require('./index')
+const Droid = require('./droid')
 
 class TreeNode {
 
@@ -108,5 +108,4 @@ function getAllItemCombinations() {
     return result
 }
 
-
-tryAllItemCombinations(collectAllItemsAndBringToPressureSensitiveRoom())
+module.exports = () => tryAllItemCombinations(collectAllItemsAndBringToPressureSensitiveRoom())

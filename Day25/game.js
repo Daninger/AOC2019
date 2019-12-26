@@ -1,4 +1,4 @@
-const Droid = require('./index.js')
+const Droid = require('./droid')
 const readline = require('readline').createInterface({
     input: process.stdin,
     output: process.stdout
