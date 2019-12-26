@@ -1,25 +1,40 @@
 const Computer = require('../Computer')
 
 const createActions = (suffix, str) => str.split("\n").map(it => it.startsWith("-") ?
-    it.substring(2) : undefined).filter(it => it).map(it => suffix + " " +
+    it.substring(2) : undefined).filter(it => it).map(it => suffix +
     it)
 
 
-class Droid {
+module.exports = class Droid {
+
+    blackListActions = ['take molten lava', 'take infinite loop', 'take escape pod']
 
     constructor() {
         this.computer = Computer.load('./Day25/input.txt')
+        this.inventory()
     }
 
     inventory() {
         this.execute("inv")
+        const lastOutput = this.getLastOutput()
+        const inventoryIdx = lastOutput.includes("You aren't carrying any items") ? -1 :
+            lastOutput.indexOf("Items in your inventory:")
+
+        if (inventoryIdx > -1) {
+            return createActions("", lastOutput.substring(inventoryIdx, lastOutput.indexOf("\n\n", inventoryIdx)))
+        }
+        return []
+    }
+
+    getRoom() {
+        const out = this.getLastOutput()
+        return out.substring(out.indexOf("=") + 1, out.indexOf("\n\n", out.indexOf("=") + 1) - 1)
     }
 
     execute(command) {
         command.split("").forEach(i => this.computer.setInput(i.charCodeAt(0)))
         this.computer.setInput(10)
         this.run()
-        console.log("Running comand", command)
     }
 
     run() {
@@ -54,58 +69,17 @@ class Droid {
         const lastOutput = this.getLastOutput()
         const doorsIdx = lastOutput.indexOf("Doors here lead:")
         const itemsIdx = lastOutput.indexOf("Items here:")
-        const inventoryIdx = lastOutput.includes("You aren't carrying any items") ? -1 :
-            lastOutput.indexOf("Items in your inventory:")
 
-        let actions = []
-        if (doorsIdx > -1) {
-            actions = actions.concat(createActions("move", lastOutput.substring(doorsIdx, lastOutput.indexOf("\n\n", doorsIdx))))
-        }
+        let move = []
+        let take = []
         if (itemsIdx > -1) {
-            actions = actions.concat(createActions("take", lastOutput.substring(itemsIdx + "Items here:".length, inventoryIdx)))
+            take = createActions("take ", lastOutput.substring(itemsIdx, lastOutput.indexOf("\n\n", itemsIdx)))
+                .filter(it => !this.blackListActions.includes(it))
         }
-        if (inventoryIdx > -1) {
-            actions = actions.concat(createActions("drop", lastOutput.substring(inventoryIdx + "Items in your inventory:".length)))
+        if (doorsIdx > -1) {
+            move = createActions("", lastOutput.substring(doorsIdx, lastOutput.indexOf("\n\n", doorsIdx)))
         }
-        return actions
+        return { move, take }
     }
 
 }
-
-class TreeNode {
-    predecessor = null
-
-    action = null
-
-    constructor(predecessor, action) {
-        this.predecessor = predecessor;
-        this.action = action;
-    }
-}
-
-// const searchQueue = []
-// let i = 0;
-// predecessor = null;
-// const droid = new Droid()
-// while (i < 10) {
-//     i++;
-//     droid.inventory()
-//     droid.getPossibleActions().map(action => new TreeNode(predecessor, action))
-//         .forEach(node => searchQueue.push(node))
-//     const last = searchQueue[searchQueue.length - 1]
-//     let list = [last]
-//     let next = last.predecessor
-//     while (next != null) {
-//         next = last.predecessor
-//         if (next) {
-//             list.push(next)
-//         }
-//         console.log("i")
-//     }
-//     list.reverse().forEach(node => droid.execute(node.action))
-//     predecessor = last
-// }
-
-
-
-module.exports = Droid
